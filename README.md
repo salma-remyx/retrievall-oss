@@ -88,6 +88,30 @@ from retrievall.filters import TopK
 ```
 
 
+### BM25 sparse retrieval
+The `sparsetext` module also provides `BM25`, the canonical sibling of TF-IDF for sparse lexical retrieval. It scores chunks against a query with the Okapi BM25 ranking function and the same `.enrich()` / `.select()` contract as `Tfidf`:
+```python
+from retrievall.chunkers import FixedSizeChunk
+from retrievall.exprs import SimpleStringify
+from retrievall.sparsetext.bm25 import BM25
+from retrievall.filters import TopK
+
+# Rank rolling 64-token page chunks by BM25 relevance to a query.
+(
+    corpus.chunk(
+        FixedSizeChunk("page", 64, offset=-32)
+    )
+    .enrich(
+        bm25=BM25(
+            SimpleStringify(),
+            query="brown fox"
+        )
+    )
+    .filter(TopK("bm25", 3))
+    .select(text=SimpleStringify())
+)
+```
+
 ## Further reading
 See the [`nbs`](/nbs/) directory for more in-depth documentation and examples.
 
