@@ -1,0 +1,16 @@
+schema_version: 1
+fork: salma-remyx/retrievall-oss
+observed_landing_zones:
+- path: src/sparsetext/
+  shape_tags:
+  - unclassified
+  confirmed_by:
+  - arxiv: 2407.03618v1
+    mode: ''
+    call_site_specifics: ''
+    branch: bm25s-orders-of-magnitude-faster-lexical-search-via-eager-sp
+    timestamp: '2026-07-18T06:20:29Z'
+  last_observed: '2026-07-18T06:20:29Z'
+rejected_shapes: []
+coordination_signals: []
+last_updated: '2026-07-18T06:20:29Z'
