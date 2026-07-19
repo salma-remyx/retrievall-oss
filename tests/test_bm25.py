@@ -1,9 +1,18 @@
 import pytest
 from retrievall.exprs import SimpleStringify
-from retrievall.sparsetext.bm25 import BM25
+from retrievall.sparsetext import BM25
 
 
 class TestBM25:
+    def test_public_export(self):
+        # BM25 must be reachable from the package root, matching the `Tfidf`
+        # convention the README quickstart documents
+        # (`from retrievall.sparsetext import ...`).
+        import retrievall.sparsetext as sparsetext
+
+        assert "BM25" in sparsetext.__all__
+        assert sparsetext.BM25 is BM25
+
     def test_expr(self, ocr_corpus):
         # Drives the existing `Chunks.select()` pipeline (from retrievall.core)
         # with the new scorer, mirroring the Tfidf quickstart.

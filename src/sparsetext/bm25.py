@@ -18,7 +18,7 @@ class BM25(AttrExpr):
     `Tfidf`, it is an `AttrExpr` that returns one score per chunk and drops into
     the same `.enrich()` / `.select()` pipeline.
 
-    Implementation note (adapted from BM25S, Probst & Lecellier 2024,
+    Implementation note (adapted from BM25S, Xing Han Lù 2024,
     https://arxiv.org/abs/2407.03618): the per-(chunk, term) BM25 contribution
     is computed *eagerly* at scoring time and assembled into a scipy sparse
     matrix, so answering a query reduces to a single sparse matrix-vector
