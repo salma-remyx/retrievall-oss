@@ -11,6 +11,16 @@ observed_landing_zones:
     branch: bm25s-orders-of-magnitude-faster-lexical-search-via-eager-sp
     timestamp: '2026-07-18T06:20:29Z'
   last_observed: '2026-07-18T06:20:29Z'
+- path: src/
+  shape_tags:
+  - unclassified
+  confirmed_by:
+  - arxiv: 2406.17526v1
+    mode: ''
+    call_site_specifics: ''
+    branch: lumberchunker-long-form-narrative-document-segmentation
+    timestamp: '2026-07-21T08:50:28Z'
+  last_observed: '2026-07-21T08:50:28Z'
 rejected_shapes:
 - shape_tag: null
   reason_code: null
@@ -19,4 +29,4 @@ rejected_shapes:
   - arxiv: 2406.17526v1
     timestamp: '2026-07-19T18:59:06Z'
 coordination_signals: []
-last_updated: '2026-07-19T18:59:06Z'
+last_updated: '2026-07-21T08:50:28Z'
