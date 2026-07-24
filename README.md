@@ -130,6 +130,11 @@ def llm(prompt: str) -> int:
 )
 ```
 
+> **Updated interface** — `ContentShiftChunk` now forms each LLM group by a word budget instead of a fixed passage count: `max_group_words` (default `660`, LumberChunker's token threshold θ ≈ 550 tokens approximated by word count) replaces `group_size`. Passages are presented with incremental `ID XXXX:` prefixes and the LLM is asked for a short chain-of-thought followed by `Answer: ID XXXX` (or `Answer: ID None` when the content does not shift) — the paper's prompt contract. Stub callables may still return a bare integer: the 0-based index of the first passage where the content shifts.
+> ```python
+> corpus.chunk(ContentShiftChunk("document", llm, max_group_words=660))
+> ```
+
 ## Further reading
 See the [`nbs`](/nbs/) directory for more in-depth documentation and examples.
 

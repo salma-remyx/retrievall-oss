@@ -7,9 +7,12 @@ language model where the content begins to shift.
 
 This is an *adapted port* of **LumberChunker** (Carron et al., 2024,
 https://arxiv.org/abs/2406.17526). The paper's core mechanism is kept at full
-fidelity: an iterative loop that shows an LLM a group of consecutive passages,
-asks for the point where the content shifts, and cuts a chunk up to that point
-before continuing. Two auxiliary components are substituted to fit Retrievall:
+fidelity: consecutive passages are greedily accumulated into a group up to a
+token budget (theta, approximated here by word count), the LLM is asked —
+with a short chain-of-thought — to flag the first passage where the content
+clearly changes, the chunk ends at that passage, and the scan resumes
+sequentially from it. The result is contiguous, non-overlapping, variably
+sized segments. Two auxiliary components are substituted to fit Retrievall:
 
 * The paper segments plain text at *sentence* granularity. This port segments
   at *atom* granularity — the framework's unit of composition — reading each
@@ -41,11 +44,13 @@ class ContentShiftChunk(ChunkExpr):
     Segment a corpus into variable-size chunks by iteratively asking an LLM
     where the content begins to shift.
 
-    A *group* of ``group_size`` consecutive atoms (ordered by ``ordinal`` and
-    bounded by ``constrain_to``) is shown to the LLM. It returns the point at
-    which the content shifts; the atoms up to that point form a chunk, and the
-    loop continues from the next atom. This yields semantically coherent,
-    variably sized segments — the core motivation of LumberChunker.
+    Consecutive atoms (ordered by ``ordinal`` and bounded by ``constrain_to``)
+    are greedily accumulated into a group until a word budget is exhausted.
+    The LLM is shown the group with incremental ``ID XXXX:`` prefixes and
+    asked to flag the first passage where the content clearly changes; the
+    atoms up to that passage form a chunk, and the scan resumes from that
+    passage. This yields semantically coherent, variably sized,
+    non-overlapping segments — the core motivation of LumberChunker.
 
     Parameters
     ----------
@@ -53,13 +58,20 @@ class ContentShiftChunk(ChunkExpr):
         Name of the parent chunk that bounds segmentation, e.g. ``"document"``.
     llm
         Callable invoked as ``llm(prompt) -> int | str``. Given the formatted
-        prompt (numbered passages), it returns either an integer or a string
-        containing one: the number of *leading* passages in the current group
-        that stay on the same topic before the content shifts (``1`` to
-        ``group_size``). Supplying the LLM as a callable keeps the framework
-        dependency-free — wire in any client, a local model, or a stub.
-    group_size
-        Number of consecutive atoms shown to the LLM per call. Default ``3``.
+        prompt (ID-prefixed passages), it should flag the first passage —
+        never the first one — where the content clearly changes, answering in
+        the paper's ``Answer: ID XXXX`` format, ideally after a brief
+        chain-of-thought quoting the shifted passage. A bare integer — the
+        0-based index of the first shifted passage — is also accepted, which
+        keeps stubs trivial. A response with no usable identifier (e.g.
+        ``Answer: ID None``) means "no shift": the whole group stays
+        together.
+    max_group_words
+        Maximum number of words accumulated into one LLM group — the paper's
+        token threshold theta, approximated by word count. Default ``660``
+        (the paper's best theta of ~550 tokens under its word-count
+        approximation). A passage that exceeds the budget on its own forms a
+        single-passage chunk.
 
     Returns
     -------
@@ -71,13 +83,13 @@ class ContentShiftChunk(ChunkExpr):
         constrain_to: str,
         llm: Callable[[str], object],
         *,
-        group_size: int = 3,
+        max_group_words: int = 660,
     ):
-        if group_size < 1:
-            raise ValueError("`group_size` must be at least 1.")
+        if max_group_words < 1:
+            raise ValueError("`max_group_words` must be at least 1.")
         self.constraint = constrain_to
         self.llm = llm
-        self.group_size = group_size
+        self.max_group_words = max_group_words
 
     def __call__(self, corpus: Corpus) -> Chunks:
         for col in ("ordinal", "text"):
@@ -133,60 +145,92 @@ class ContentShiftChunk(ChunkExpr):
 
     def _segments(self, atoms: list, texts: list) -> Iterator[list]:
         """
-        Yield successive atom segments for one constraining chunk by repeatedly
-        asking the LLM where the content shifts within a group.
+        Yield successive atom segments for one constraining chunk.
+
+        Passages are greedily accumulated into a group until adding the next
+        would exceed ``max_group_words`` (the paper's token threshold theta,
+        approximated by word count). The LLM flags the first passage of the
+        group where the content shifts; the chunk ends there and the scan
+        resumes sequentially from that passage — never looking back and never
+        overlapping.
         """
-        size = self.group_size
         i = 0
         n = len(atoms)
         while i < n:
-            group_atoms = atoms[i : i + size]
-            group_texts = texts[i : i + size]
-            # A trailing group smaller than `group_size` can't be presented as a
-            # full window; emit it as the final chunk (LumberChunker does the
-            # same with its remaining sentences).
-            if len(group_atoms) < size:
-                yield group_atoms
-                return
-            k = self._shift_point(group_texts)
-            yield group_atoms[:k]
+            words = self._word_count(texts[i])
+            j = i + 1
+            while j < n and words + self._word_count(texts[j]) <= self.max_group_words:
+                words += self._word_count(texts[j])
+                j += 1
+            if j - i == 1:
+                # A lone passage that fills the budget on its own cannot be
+                # split further; emit it directly without querying the LLM.
+                yield atoms[i:j]
+                i = j
+                continue
+            k = self._shift_point(texts[i:j])
+            yield atoms[i : i + k]
             i += k
 
     def _shift_point(self, texts: list) -> int:
-        """Ask the LLM for the content-shift point and coerce to a valid index."""
+        """
+        Ask the LLM where the content shifts and return the number of leading
+        passages (1..len(texts)) that stay on the same topic.
+        """
         raw = self.llm(self._prompt(texts))
-        return self._coerce_int(raw, default=len(texts), lo=1, hi=len(texts))
+        flagged = self._parse_answer(raw)
+        if flagged is None:
+            return len(texts)  # no shift: the whole group stays together
+        # Flagged index 0 (or negative) is invalid per the prompt; clamp to 1
+        # so the scan always advances. Indices past the group mean "no shift".
+        return max(1, min(len(texts), flagged))
 
     def _prompt(self, texts: list) -> str:
-        passages = "\n".join(
-            f"[{idx}] {text}" for idx, text in enumerate(texts, start=1)
-        )
+        passages = "\n".join(f"ID {idx:04d}: {text}" for idx, text in enumerate(texts))
         return (
-            "You are given a group of consecutive passages from a document. "
-            "Identify where the content begins to shift to a new topic.\n"
+            "You will be given a group of consecutive passages from a "
+            "document. Each passage is prefixed with an incremental "
+            "identifier.\n"
+            "Find the first passage (not the first one) where the content "
+            "clearly changes compared to the passages before it.\n\n"
             f"Passages:\n{passages}\n\n"
-            "Return a single integer k between 1 and "
-            f"{len(texts)}: the number of leading passages that stay on the "
-            "same topic before the shift. Return only the integer."
+            "Briefly explain your reasoning, quoting the passage where the "
+            "content shifts and the passage immediately before it. Then, on "
+            "a new line, answer with the identifier of the shifted passage "
+            "in the format 'Answer: ID XXXX'. If the content does not change "
+            "anywhere in the group, answer 'Answer: ID None'."
         )
 
     # -- helpers -----------------------------------------------------------
 
     @staticmethod
-    def _coerce_int(raw: object, *, default: int, lo: int, hi: int) -> int:
-        """Extract an integer from an LLM response and clamp it to [lo, hi]."""
+    def _parse_answer(raw: object) -> int | None:
+        """
+        Extract the 0-based index of the first shifted passage from an LLM
+        response, or ``None`` when the response reports no shift.
+
+        The paper's ``Answer: ID XXXX`` contract is preferred; the last match
+        wins so chain-of-thought reasoning above the final answer line cannot
+        shadow it. Bare integers (from stubs or terse clients) are accepted
+        as a fallback.
+        """
         if isinstance(raw, bool):  # bool is an int subclass; treat as no answer
-            return default
+            return None
         if isinstance(raw, int):
-            value = raw
-        elif isinstance(raw, float) and raw.is_integer():
-            value = int(raw)
-        elif isinstance(raw, str):
-            match = re.search(r"-?\d+", raw)
-            value = int(match.group()) if match else default
-        else:
-            return default
-        return max(lo, min(hi, value))
+            return raw
+        if isinstance(raw, float):
+            return int(raw) if raw.is_integer() else None
+        if not isinstance(raw, str):
+            return None
+        for pattern in (r"Answer:\s*ID\s*(\d+)", r"ID\s*(\d+)", r"-?\d+"):
+            matches = re.findall(pattern, raw, flags=re.IGNORECASE)
+            if matches:
+                return int(matches[-1])
+        return None
+
+    @staticmethod
+    def _word_count(text: str) -> int:
+        return len(text.split())
 
     @staticmethod
     def _chunk_id(constraint: object, segment: list) -> int:
