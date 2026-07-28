@@ -112,6 +112,36 @@ from retrievall.filters import TopK
 )
 ```
 
+### Dense (embedding) retrieval
+The `dense` module provides `Dense`, the dense-embedding sibling of `Tfidf` / `BM25`. It embeds each chunk and the query and scores them by cosine similarity, using the same `.enrich()` / `.select()` contract. The default encoder uses a [sentence-transformers](https://www.sbert.net/) model (install it separately: `pip install sentence-transformers`); pass `encoder=` to plug in any embedding backend.
+```python
+from retrievall.chunkers import FixedSizeChunk
+from retrievall.exprs import SimpleStringify
+from retrievall.dense import Dense
+from retrievall.filters import TopK
+
+# Rank rolling 64-token page chunks by dense cosine similarity to a query.
+(
+    corpus.chunk(
+        FixedSizeChunk("page", 64, offset=-32)
+    )
+    .enrich(
+        dense=Dense(
+            SimpleStringify(),
+            query="brown fox"
+        )
+    )
+    .filter(TopK("dense", 3))
+    .select(text=SimpleStringify())
+)
+```
+
+`Dense` is adapted from *2D Matryoshka Sentence Embeddings*: a single embedding can be shortened at scoring time via the `dimensions` (and, for multi-layer encoders, `layers`) keyword and still score meaningfully, trading quality for compute without re-embedding.
+```python
+# Score with the embedding truncated to its first 256 Matryoshka components.
+Dense(SimpleStringify(), query="brown fox", dimensions=256)
+```
+
 ## Further reading
 See the [`nbs`](/nbs/) directory for more in-depth documentation and examples.
 
