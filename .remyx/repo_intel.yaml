@@ -21,6 +21,16 @@ observed_landing_zones:
     branch: lumberchunker-long-form-narrative-document-segmentation
     timestamp: '2026-07-21T08:50:28Z'
   last_observed: '2026-07-21T08:50:28Z'
+- path: src/dense/
+  shape_tags:
+  - unclassified
+  confirmed_by:
+  - arxiv: 2402.14776v3
+    mode: ''
+    call_site_specifics: ''
+    branch: 2d-matryoshka-sentence-embeddings
+    timestamp: '2026-07-28T21:33:09Z'
+  last_observed: '2026-07-28T21:33:09Z'
 rejected_shapes:
 - shape_tag: null
   reason_code: null
@@ -31,4 +41,4 @@ rejected_shapes:
   - arxiv: 2409.02343v1
     timestamp: '2026-07-28T04:30:18Z'
 coordination_signals: []
-last_updated: '2026-07-28T04:30:18Z'
+last_updated: '2026-07-28T21:33:09Z'
