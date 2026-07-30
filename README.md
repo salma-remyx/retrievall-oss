@@ -122,4 +122,32 @@ We welcome contributions to Retrievall! Please see our contributing guidelines f
 Retrievall is open-source software licensed under the MIT license.
 
 ## Support
-For questions, feature requests or bug reports, please open an issue on this Github repo. 
+For questions, feature requests or bug reports, please open an issue on this Github repo.
+
+### Reciprocal rank fusion (hybrid retrieval)
+The `sparsetext` module also provides `ReciprocalRankFusion`, which combines several retrieval channels into a single relevance score per chunk using Reciprocal Rank Fusion (RRF). Because RRF fuses *ranks* rather than raw scores, it mixes channels whose score scales are incomparable — sparse lexical scorers like `Tfidf`/`BM25` alongside any future dense or knowledge-graph scorer — without calibrating them. It has the same `.enrich()` / `.select()` contract as the individual scorers:
+```python
+from retrievall.exprs import SimpleStringify
+from retrievall.sparsetext import BM25, Tfidf
+from retrievall.sparsetext.fusion import ReciprocalRankFusion
+from retrievall.filters import TopK
+
+# Fuse TF-IDF and BM25 into one ranking for a query, then keep the top chunks.
+(
+    corpus.chunk("page")
+    .enrich(
+        fused=ReciprocalRankFusion(
+            [
+                Tfidf(SimpleStringify(), query="brown fox"),
+                BM25(SimpleStringify(), query="brown fox"),
+            ],
+            # Optional per-channel weights (normalized to sum to 1); default is
+            # a uniform fusion. Up-weight the channel you trust for this query.
+            weights=[0.4, 0.6],
+        )
+    )
+    .filter(TopK("fused", 3))
+    .select(text=SimpleStringify())
+)
+```
+The fusion core is adapted from APS-RAG ("A corrective agentic hybrid RAG and an operations-grounded evaluation for a scientific facility", [arXiv:2607.24663](https://arxiv.org/abs/2607.24663)), whose retrieval engine fuses dense, sparse, and knowledge-graph channels with query-type-adaptive reciprocal-rank fusion; here the per-channel `weights` expose that adaptive knob.
