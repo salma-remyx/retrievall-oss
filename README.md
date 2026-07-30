@@ -112,6 +112,29 @@ from retrievall.filters import TopK
 )
 ```
 
+### LLM content-shift chunking
+`content_shift_chunk.ContentShiftChunk` segments a corpus into variable-size chunks by iteratively asking a large language model where the content begins to shift — adapted from LumberChunker. The LLM is supplied as an injectable callable, so the framework stays dependency-free: wire in any client (or a stub for testing).
+```python
+from retrievall.content_shift_chunk import ContentShiftChunk
+from retrievall.exprs import SimpleStringify
+
+def llm(prompt: str) -> int:
+    ...  # return 1..group_size: the leading passages before the content shifts
+
+# Segment each document into variably sized, topically coherent chunks.
+(
+    corpus.chunk(
+        ContentShiftChunk("document", llm, group_size=3)
+    )
+    .select(text=SimpleStringify())
+)
+```
+
+> **Updated interface** — `ContentShiftChunk` now forms each LLM group by a word budget instead of a fixed passage count: `max_group_words` (default `660`, LumberChunker's token threshold θ ≈ 550 tokens approximated by word count) replaces `group_size`. Passages are presented with incremental `ID XXXX:` prefixes and the LLM is asked for a short chain-of-thought followed by `Answer: ID XXXX` (or `Answer: ID None` when the content does not shift) — the paper's prompt contract. Stub callables may still return a bare integer: the 0-based index of the first passage where the content shifts.
+> ```python
+> corpus.chunk(ContentShiftChunk("document", llm, max_group_words=660))
+> ```
+
 ## Further reading
 See the [`nbs`](/nbs/) directory for more in-depth documentation and examples.
 
