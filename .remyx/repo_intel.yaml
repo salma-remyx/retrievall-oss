@@ -15,7 +15,12 @@ observed_landing_zones:
     call_site_specifics: ''
     branch: a-corrective-agentic-hybrid-rag-and-an-operations-grounded-e
     timestamp: '2026-07-30T20:55:34Z'
-  last_observed: '2026-07-30T20:55:34Z'
+  - arxiv: 2402.17535v1
+    mode: ''
+    call_site_specifics: ''
+    branch: multimodal-learned-sparse-retrieval-with-probabilistic-expan
+    timestamp: '2026-07-31T11:06:43Z'
+  last_observed: '2026-07-31T11:06:43Z'
 - path: src/
   shape_tags:
   - unclassified
@@ -46,4 +51,4 @@ rejected_shapes:
   - arxiv: 2409.02343v1
     timestamp: '2026-07-28T04:30:18Z'
 coordination_signals: []
-last_updated: '2026-07-30T20:55:34Z'
+last_updated: '2026-07-31T11:06:43Z'
