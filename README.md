@@ -112,6 +112,33 @@ from retrievall.filters import TopK
 )
 ```
 
+
+### Splade learned sparse retrieval
+The `sparsetext` module also provides `Splade`, a learned-sparse sibling of `BM25`/`Tfidf`. It uses the same `.enrich()` / `.select()` contract, but its per-text sparse vector *expands* beyond the literal terms to related vocabulary (controlled by a term budget) and scores by sparse dot product — adapted from *Multimodal Learned Sparse Retrieval with Probabilistic Expansion Control* (Bhojanapalli et al. 2024). The default uses a dependency-free corpus co-occurrence proxy; pass an injectable `encoder=` (e.g. `SpladeEncoder`) to use a learned SPLADE model:
+```python
+from retrievall.chunkers import FixedSizeChunk
+from retrievall.exprs import SimpleStringify
+from retrievall.sparsetext import Splade
+from retrievall.filters import TopK
+
+# Rank rolling 64-token page chunks by learned-sparse relevance to a query,
+# keeping a controlled budget of expanded terms per chunk.
+(
+    corpus.chunk(
+        FixedSizeChunk("page", 64, offset=-32)
+    )
+    .enrich(
+        splade=Splade(
+            SimpleStringify(),
+            query="brown fox",
+            max_terms=64,
+        )
+    )
+    .filter(TopK("splade", 3))
+    .select(text=SimpleStringify())
+)
+```
+
 ## Further reading
 See the [`nbs`](/nbs/) directory for more in-depth documentation and examples.
 

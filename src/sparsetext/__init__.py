@@ -4,8 +4,12 @@ from .bm25 import (
 from .scorers import (
     Tfidf,
 )
+from .splade import (
+    Splade,
+)
 
 __all__ = [
     "BM25",
     "Tfidf",
+    "Splade",
 ]
