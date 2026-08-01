@@ -40,7 +40,12 @@ observed_landing_zones:
     call_site_specifics: ''
     branch: 2d-matryoshka-sentence-embeddings
     timestamp: '2026-07-28T21:33:09Z'
-  last_observed: '2026-07-28T21:33:09Z'
+  - arxiv: 2607.27178v1
+    mode: ''
+    call_site_specifics: ''
+    branch: denseon-with-the-lateon-fully-open-dense-and-late-interactio
+    timestamp: '2026-08-01T03:39:49Z'
+  last_observed: '2026-08-01T03:39:49Z'
 rejected_shapes:
 - shape_tag: null
   reason_code: null
@@ -51,4 +56,4 @@ rejected_shapes:
   - arxiv: 2409.02343v1
     timestamp: '2026-07-28T04:30:18Z'
 coordination_signals: []
-last_updated: '2026-07-31T11:06:43Z'
+last_updated: '2026-08-01T03:39:49Z'
