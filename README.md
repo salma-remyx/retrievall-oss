@@ -112,6 +112,31 @@ from retrievall.filters import TopK
 )
 ```
 
+## Dense late-interaction (MaxSim) retrieval
+The `dense` module provides `MaxSim`, a ColBERT-style late-interaction scorer (adapted from *DenseOn with the LateOn: Fully Open Dense and Late-Interaction Models for Multilingual, Long-Context, and Code Search*). It scores a chunk as the sum, over query tokens, of its best cosine similarity to any chunk token — `sum_i max_j cos(q_i, d_j)`. This keeps per-token resolution like the paper's `LateOn` model, and unlike `BM25`/`Tfidf` the per-token match is a graded similarity rather than an exact term hit. It shares the same `.enrich()` / `.select()` contract as `Tfidf` and `BM25`, and pulls in the same numpy/scikit-learn stack as the `sparsetext` extra:
+
+```python
+from retrievall.chunkers import FixedSizeChunk
+from retrievall.exprs import SimpleStringify
+from retrievall.dense import MaxSim
+from retrievall.filters import TopK
+
+# Rank rolling 64-token page chunks by late-interaction MaxSim to a query.
+(
+    corpus.chunk(
+        FixedSizeChunk("page", 64, offset=-32)
+    )
+    .enrich(
+        maxsim=MaxSim(
+            SimpleStringify(),
+            query="brown fox"
+        )
+    )
+    .filter(TopK("maxsim", 3))
+    .select(text=SimpleStringify())
+)
+```
+
 ## Further reading
 See the [`nbs`](/nbs/) directory for more in-depth documentation and examples.
 
