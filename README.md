@@ -32,6 +32,7 @@ from retrievall.sparsetext import Tfidf
 The currently available extension modules are:
 * `sparsetext`: Sparse text-based retrieval components, like `Tfidf`
 * `ocr`: Representations of and interactions with OCR data, like Tesseract.
+* `dense`: Dense and hybrid retrieval components — `DenseEmbedding` plus `HybridRRF` reciprocal-rank fusion (adapted from UEmbed).
 
 ## Quickstart
 > ⚠️ This is a pre-1.0 version, so the public API may change rapidly.
@@ -108,6 +109,54 @@ from retrievall.filters import TopK
         )
     )
     .filter(TopK("bm25", 3))
+    .select(text=SimpleStringify())
+)
+```
+
+### Dense and hybrid retrieval
+The `dense` module provides `DenseEmbedding`, the dense counterpart to `Tfidf` / `BM25`: it embeds chunks and a query and scores them by cosine similarity, using the same `.enrich()` / `.select()` contract.
+
+`DenseEmbedding` takes an injectable `embedder` (any callable mapping `list[str] -> (n, d)` vectors). Without one, it lazily loads a [sentence-transformers](https://www.sbert.net/) backend on first use — so install it separately (e.g. `pip install sentence-transformers`) and the heavy model stays out of the slim core and out of import time.
+
+```python
+from retrievall.chunkers import FixedSizeChunk
+from retrievall.exprs import SimpleStringify
+from retrievall.dense import DenseEmbedding
+from retrievall.filters import TopK
+
+# Rank rolling 64-token page chunks by dense semantic relevance to a query.
+(
+    corpus.chunk(
+        FixedSizeChunk("page", 64, offset=-32)
+    )
+    .enrich(
+        dense=DenseEmbedding(
+            SimpleStringify(),
+            query="brown fox",
+        )
+    )
+    .filter(TopK("dense", 3))
+    .select(text=SimpleStringify())
+)
+```
+
+`HybridRRF` fuses two or more scorers into one ranking with reciprocal rank fusion (RRF) — the standard way to blend a sparse lexical signal with a dense semantic signal, the core idea of [UEmbed (Unified Sparse and Dense Multimodal Embeddings)](https://arxiv.org/abs/2608.02583v1). UEmbed produces both representations inside one model; `HybridRRF` does the equivalent fusion at the framework level, combining any scorers (here `BM25` and `DenseEmbedding`) into a single hybrid retriever:
+
+```python
+from retrievall.sparsetext import BM25
+from retrievall.dense import DenseEmbedding, HybridRRF
+
+(
+    corpus.chunk(
+        FixedSizeChunk("page", 64, offset=-32)
+    )
+    .enrich(
+        hybrid=HybridRRF(
+            BM25(SimpleStringify(), query="brown fox"),
+            DenseEmbedding(SimpleStringify(), query="brown fox"),
+        )
+    )
+    .filter(TopK("hybrid", 3))
     .select(text=SimpleStringify())
 )
 ```
