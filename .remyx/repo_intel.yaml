@@ -45,7 +45,12 @@ observed_landing_zones:
     call_site_specifics: ''
     branch: denseon-with-the-lateon-fully-open-dense-and-late-interactio
     timestamp: '2026-08-01T03:39:49Z'
-  last_observed: '2026-08-01T03:39:49Z'
+  - arxiv: 2608.02583v1
+    mode: ''
+    call_site_specifics: ''
+    branch: uembed-unified-sparse-and-dense-multimodal-embeddings
+    timestamp: '2026-08-07T18:00:09Z'
+  last_observed: '2026-08-07T18:00:09Z'
 rejected_shapes:
 - shape_tag: null
   reason_code: null
@@ -58,4 +63,4 @@ rejected_shapes:
   - arxiv: 2404.10774v2
     timestamp: '2026-08-03T12:31:58Z'
 coordination_signals: []
-last_updated: '2026-08-03T12:31:58Z'
+last_updated: '2026-08-07T18:00:09Z'
