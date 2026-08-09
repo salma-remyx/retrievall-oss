@@ -112,6 +112,39 @@ from retrievall.filters import TopK
 )
 ```
 
+### Hybrid retrieval with Reciprocal Rank Fusion
+Weighted Reciprocal Rank Fusion (RRF) — adapted from *Do Static Embeddings Add Value to Hybrid Dutch Retrieval?* — combines several retrievers' ranked lists into a single fused score per chunk without needing their raw scores to share a scale. Enrich the chunks with one score column per retriever, then fuse; the fused column feeds the same `TopK` / `Threshold` filters as any single scorer. When no weights are given, columns are fused equally — the equal-weight two-retriever default the paper found robust across its Dutch tasks.
+```python
+from retrievall.chunkers import FixedSizeChunk
+from retrievall.exprs import SimpleStringify
+from retrievall import WeightedRRF
+from retrievall.sparsetext import BM25, Tfidf
+from retrievall.filters import TopK
+
+# Score rolling 64-token page chunks with two retrievers, then fuse their
+# rankings and keep the top 3 by the fused score.
+(
+    corpus.chunk(
+        FixedSizeChunk("page", 64, offset=-32)
+    )
+    .enrich(
+        bm25=BM25(
+            SimpleStringify(),
+            query="brown fox"
+        ),
+        tfidf=Tfidf(
+            SimpleStringify(),
+            query="brown fox"
+        ),
+    )
+    .enrich(
+        fused=WeightedRRF(columns=["bm25", "tfidf"])
+    )
+    .filter(TopK("fused", 3))
+    .select(text=SimpleStringify())
+)
+```
+
 ## Further reading
 See the [`nbs`](/nbs/) directory for more in-depth documentation and examples.
 
