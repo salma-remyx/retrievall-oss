@@ -30,7 +30,14 @@ observed_landing_zones:
     call_site_specifics: ''
     branch: lumberchunker-long-form-narrative-document-segmentation
     timestamp: '2026-07-21T08:50:28Z'
-  last_observed: '2026-07-21T08:50:28Z'
+  - arxiv: 2608.02112v1
+    mode: Mode 1 (direct port)
+    call_site_specifics: "Chunks.enrich(**exprs) \u2014 the existing AttrExpr scorer\
+      \ contract that BM25/Tfidf already feed (WeightedRRF is an AttrExpr subclass),\
+      \ invoked as corpus.chunk(...).enrich(fused=WeightedRRF(...)).filter(To"
+    branch: do-static-embeddings-add-value-to-hybrid-dutch-retrieval
+    timestamp: '2026-08-09T04:30:39Z'
+  last_observed: '2026-08-09T04:30:39Z'
 - path: src/dense/
   shape_tags:
   - unclassified
@@ -63,4 +70,4 @@ rejected_shapes:
   - arxiv: 2404.10774v2
     timestamp: '2026-08-03T12:31:58Z'
 coordination_signals: []
-last_updated: '2026-08-07T18:00:09Z'
+last_updated: '2026-08-09T04:30:39Z'
