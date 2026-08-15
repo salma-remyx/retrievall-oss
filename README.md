@@ -112,6 +112,38 @@ from retrievall.filters import TopK
 )
 ```
 
+### Context expansion after retrieval
+A top-k cut is where a number gets separated from the header that gives it meaning — a table row from its unit header, a figure from the fiscal year it belongs to. `ContextExpand` repairs that cut *after* retrieval by walking the corpus' own structure: it re-cuts each chunk to span the `before` preceding and `after` following chunks of an existing structural chunking, in reading order.
+```python
+from retrievall.chunkers import FixedSizeChunk
+from retrievall.exprs import SimpleStringify
+from retrievall.context_expand import ContextExpand
+from retrievall.sparsetext.bm25 import BM25
+from retrievall.filters import TopK
+
+# Rank rolling chunks by BM25, then re-attach the line above and below each
+# hit so a number arrives with its header.
+(
+    corpus.chunk(
+        FixedSizeChunk("page", 64, offset=-32)
+    )
+    .enrich(
+        bm25=BM25(
+            SimpleStringify(),
+            query="brown fox"
+        )
+    )
+    .filter(TopK("bm25", 3))
+    .filter(ContextExpand("line", before=1, after=1))
+    .select(text=SimpleStringify())
+)
+```
+`TopK` and `Threshold` also accept a `context=` kwarg that applies the same expansion for you:
+```python
+corpus.chunk("line").filter(TopK("bm25", 3, context="line", before=1, after=1))
+```
+Adapted from *Beyond Top-K: Replacing Black-Box Retrieval with Interpretable Agentic Operations* (READ, 2026), which replaces top-k similarity search with structural navigation and bounded span reads over the raw document. Here those operations are a deterministic `ChunkFilter` over the chunk graph the corpus already maintains, rather than agent-driven tools.
+
 ## Further reading
 See the [`nbs`](/nbs/) directory for more in-depth documentation and examples.
 
