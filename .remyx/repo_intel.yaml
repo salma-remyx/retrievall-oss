@@ -23,7 +23,7 @@ observed_landing_zones:
   last_observed: '2026-07-31T11:06:43Z'
 - path: src/
   shape_tags:
-  - unclassified
+  - library-shape-public-api
   confirmed_by:
   - arxiv: 2406.17526v1
     mode: ''
@@ -37,7 +37,14 @@ observed_landing_zones:
       \ invoked as corpus.chunk(...).enrich(fused=WeightedRRF(...)).filter(To"
     branch: do-static-embeddings-add-value-to-hybrid-dutch-retrieval
     timestamp: '2026-08-09T04:30:39Z'
-  last_observed: '2026-08-09T04:30:39Z'
+  - arxiv: 2608.06305v1
+    mode: Mode 2 (adapted port)
+    call_site_specifics: "retrievall.filters.TopK and retrievall.filters.Threshold\
+      \ \u2014 the library's pre-existing selector step, reached from Chunks.filter\
+      \ in the corpus.chunk().enrich().filter().select() pipeline; src/filters.p"
+    branch: beyond-top-k-replacing-black-box-retrieval-with-interpretabl
+    timestamp: '2026-08-15T20:01:03Z'
+  last_observed: '2026-08-15T20:01:03Z'
 - path: src/dense/
   shape_tags:
   - unclassified
@@ -70,4 +77,4 @@ rejected_shapes:
   - arxiv: 2404.10774v2
     timestamp: '2026-08-03T12:31:58Z'
 coordination_signals: []
-last_updated: '2026-08-09T04:30:39Z'
+last_updated: '2026-08-15T20:01:03Z'
